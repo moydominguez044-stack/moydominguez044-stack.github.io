@@ -72,6 +72,9 @@
   .mapa{width:100%;border-radius:8px;margin-top:12px;border:1.5px solid var(--borde);display:block}
   .fila-btn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
   .fila-btn a{text-decoration:none;text-align:center}
+  .iniciar-titulo{margin:16px 0 0;font-weight:600}
+  .btn.waze{background:#33CCFF;color:#0B2A3A}
+  #notaWaze{margin:8px 0 0}
 
   .total{background:#fff;border:1.5px solid var(--borde);border-left:6px solid var(--linea);border-radius:8px;padding:14px 16px}
   .monto{font:700 2.4rem/1 'Barlow Condensed',sans-serif;color:var(--verde-osc)}
@@ -159,10 +162,13 @@
     </div></div>
     <div class="aviso" id="aviso" hidden></div>
     <img class="mapa" id="mapa" alt="Mapa de la ruta" hidden>
+    <p class="iniciar-titulo">Iniciar el viaje desde donde estás</p>
     <div class="fila-btn">
-      <button class="btn sec" id="compartir">Compartir</button>
-      <a class="btn sec" id="abrirMaps" target="_blank" rel="noopener">Navegar en Maps</a>
+      <a class="btn" id="abrirMaps" target="_blank" rel="noopener">Google Maps</a>
+      <a class="btn waze" id="abrirWaze" target="_blank" rel="noopener">Waze</a>
     </div>
+    <p class="ayuda" id="notaWaze" hidden></p>
+    <button class="btn sec" id="compartir" style="margin-top:10px">Compartir costo del viaje</button>
   </section>
 
   <section>

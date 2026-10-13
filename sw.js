@@ -1,6 +1,6 @@
 /* Guarda la app en el teléfono para que abra sin internet.
  * Cuando cambiés index.html o app.js, subí el número de VERSION. */
-const VERSION = 'rutas-v2';
+const VERSION = 'rutas-v3';
 const ARCHIVOS = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'privacidad.html',
   'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 

@@ -304,10 +304,34 @@ function mostrarViaje(v) {
   $('aviso').hidden = !r.advertencia; $('aviso').textContent = r.advertencia || '';
   if (r.mapa) { $('mapa').src = r.mapa; $('mapa').hidden = false; } else $('mapa').hidden = true;
 
-  const enc = p => encodeURIComponent(p.coords || (/nicaragua/i.test(p.texto) ? p.texto : p.texto + ', Nicaragua'));
-  $('abrirMaps').href = 'https://www.google.com/maps/dir/' + v.paradas.map(enc).join('/');
+  enlacesNavegar(v.paradas);
   $('resultado').hidden = false;
   calcularCosto();
+}
+
+/* ---------- Iniciar el viaje en Google Maps o Waze ---------- */
+const lugarURL = p => p.coords || (/nicaragua/i.test(p.texto) ? p.texto : p.texto + ', Nicaragua');
+
+function enlacesNavegar(paradas) {
+  // Google Maps: sale desde donde está el teléfono y pasa por todas las paradas en orden
+  const g = new URL('https://www.google.com/maps/dir/');
+  g.searchParams.set('api', '1');
+  g.searchParams.set('destination', lugarURL(paradas[paradas.length - 1]));
+  const intermedias = paradas.slice(1, -1).map(lugarURL);
+  if (intermedias.length) g.searchParams.set('waypoints', intermedias.join('|'));
+  g.searchParams.set('travelmode', 'driving');
+  g.searchParams.set('dir_action', 'navigate');
+  $('abrirMaps').href = g.toString();
+
+  // Waze solo acepta un destino: lleva a la siguiente parada
+  const sig = paradas[1];
+  const w = new URL('https://waze.com/ul');
+  if (sig.coords) w.searchParams.set('ll', sig.coords); else w.searchParams.set('q', lugarURL(sig));
+  w.searchParams.set('navigate', 'yes');
+  $('abrirWaze').href = w.toString();
+  const varias = paradas.length > 2;
+  $('notaWaze').hidden = !varias;
+  if (varias) $('notaWaze').textContent = 'Waze no acepta varias paradas: te lleva primero a ' + corto(sig.texto) + '. Google Maps lleva el recorrido completo.';
 }
 
 /* ---------- Combustible ---------- */
