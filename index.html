@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13683A">
+<meta name="description" content="Distancia, tiempo y costo de combustible entre lugares de Nicaragua.">
+<title>Rutas Nicaragua</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--verde:#13683A;--verde-osc:#0D4A29;--asfalto:#2B2F33;--linea:#F2C230;--papel:#F7F8F5;
+        --gris:#6F767D;--borde:#D9DDD8;--rojo:#B3261E;--blanco:#fff}
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--papel);color:var(--asfalto);font:16px/1.5 'Barlow',system-ui,sans-serif;
+       padding-bottom:env(safe-area-inset-bottom,0)}
+  header{background:var(--verde);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 12px;
+         position:sticky;top:0;z-index:5;box-shadow:0 2px 0 var(--verde-osc)}
+  .barra{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:10px}
+  header h1{font:700 1.6rem/1 'Barlow Condensed',sans-serif;margin:0;flex:1}
+  .btn-top{background:transparent;border:2px solid #fff;color:#fff;border-radius:8px;padding:6px 10px;
+           font:600 .9rem 'Barlow',sans-serif;cursor:pointer}
+  .btn-top:focus-visible{outline:2px solid var(--linea);outline-offset:2px}
+  .sinred{background:var(--linea);color:var(--asfalto);text-align:center;font-weight:600;padding:6px 12px;font-size:.9rem}
+  main{max-width:560px;margin:0 auto;padding:16px 16px 48px}
+  h2{font:700 1.2rem 'Barlow Condensed',sans-serif;margin:0 0 10px}
+  section{margin-top:24px} section:first-child{margin-top:4px}
+
+  .paradas{position:relative;padding-left:34px}
+  .paradas::before{content:"";position:absolute;left:13px;top:22px;bottom:22px;width:4px;
+     background:repeating-linear-gradient(var(--linea) 0 10px,transparent 10px 18px)}
+  .parada{position:relative;display:flex;gap:6px;align-items:center;margin-bottom:10px}
+  .parada .letra{position:absolute;left:-34px;width:30px;height:30px;border-radius:50%;background:var(--verde);
+     color:#fff;font:700 1rem/30px 'Barlow Condensed',sans-serif;text-align:center}
+  .parada input{flex:1;min-width:0}
+  .parada input.gps{background:#EAF4EE;border-color:var(--verde);font-weight:600}
+  .icono{border:0;background:transparent;color:var(--gris);font-size:1.25rem;cursor:pointer;width:40px;height:42px;flex:none;border-radius:8px}
+  .icono.gpsbtn{color:var(--verde)}
+  .icono:focus-visible{outline:2px solid var(--verde)}
+  .acciones{display:flex;gap:16px;flex-wrap:wrap;margin:2px 0 12px 34px}
+  .link{background:none;border:0;color:var(--verde);font:600 .95rem 'Barlow',sans-serif;cursor:pointer;padding:6px 0}
+  .link:focus-visible{outline:2px solid var(--verde)}
+
+  input,select{width:100%;font:inherit;padding:10px 12px;border:1.5px solid var(--borde);border-radius:8px;background:#fff;color:var(--asfalto)}
+  input:focus-visible,select:focus-visible{outline:2px solid var(--verde);outline-offset:1px;border-color:var(--verde)}
+  .campo{margin-bottom:12px}
+  .campo label{display:block;font-weight:600;font-size:.92rem;margin-bottom:4px}
+  .ayuda{font-size:.82rem;color:var(--gris);margin:-6px 0 12px}
+  .dos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tres{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .btn{background:var(--verde);color:#fff;border:0;border-radius:8px;padding:13px 16px;font:600 1.05rem 'Barlow',sans-serif;cursor:pointer;width:100%}
+  .btn.sec{background:#fff;color:var(--verde);border:1.5px solid var(--verde)}
+  .btn:disabled{opacity:.6;cursor:wait}
+  .btn:focus-visible{outline:2px solid var(--linea);outline-offset:2px}
+  .error{color:var(--rojo);margin-top:8px;font-weight:500}
+  .error:empty{display:none}
+  .aviso{background:#FFF6D6;border-left:4px solid var(--linea);padding:8px 12px;border-radius:6px;margin-top:12px;font-size:.92rem}
+
+  .rotulo{background:var(--verde);color:#fff;border-radius:10px;padding:6px;box-shadow:0 2px 0 var(--verde-osc)}
+  .rotulo-in{border:2px solid #fff;border-radius:7px;padding:14px 16px}
+  .tot{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .tot b{font:700 3rem/1 'Barlow Condensed',sans-serif}
+  .tot span{font:600 1.35rem 'Barlow Condensed',sans-serif}
+  .via{font-size:.9rem;opacity:.92;margin-top:6px}
+  .tramos{list-style:none;margin:12px 0 0;padding:12px 0 0;border-top:2px dashed var(--linea)}
+  .tramos li{display:grid;grid-template-columns:1fr auto;gap:0 10px;padding:4px 0}
+  .t-km{font-weight:600;text-align:right}
+  .t-min{grid-column:2;text-align:right;font-size:.85rem;opacity:.85}
+  .mapa{width:100%;border-radius:8px;margin-top:12px;border:1.5px solid var(--borde);display:block}
+  .fila-btn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .fila-btn a{text-decoration:none;text-align:center}
+
+  .total{background:#fff;border:1.5px solid var(--borde);border-left:6px solid var(--linea);border-radius:8px;padding:14px 16px}
+  .monto{font:700 2.4rem/1 'Barlow Condensed',sans-serif;color:var(--verde-osc)}
+  .total dl{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin:12px 0 0}
+  .total dt{color:var(--gris)} .total dd{margin:0;font-weight:600;text-align:right}
+
+  .historial{list-style:none;padding:0;margin:0}
+  .historial li{border-bottom:1px solid var(--borde)}
+  .historial button{all:unset;box-sizing:border-box;display:grid;grid-template-columns:1fr auto;width:100%;padding:10px 2px;cursor:pointer;gap:2px 10px}
+  .historial button:focus-visible{outline:2px solid var(--verde)}
+  .h-ruta{font-weight:600}
+  .h-det{grid-column:1;font-size:.85rem;color:var(--gris)}
+  .h-cs{grid-row:1/span 2;grid-column:2;align-self:center;font:700 1.2rem 'Barlow Condensed',sans-serif;color:var(--verde-osc)}
+  .vacio{color:var(--gris)}
+  details{margin-top:24px;border-top:1px solid var(--borde);padding-top:12px}
+  summary{cursor:pointer;font-weight:600}
+  .estado{font-size:.85rem;color:var(--gris);margin-top:6px}
+  footer{max-width:560px;margin:0 auto;padding:0 16px 32px;font-size:.85rem;color:var(--gris)}
+  footer a{color:var(--gris)}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="barra">
+    <h1>Rutas Nicaragua</h1>
+    <button class="btn-top" id="instalar" hidden>Instalar</button>
+  </div>
+</header>
+<div class="sinred" id="sinred" hidden>Sin conexión. Podés ver tus viajes guardados.</div>
+
+<main>
+  <datalist id="lugares"></datalist>
+
+  <section>
+    <h2>Recorrido</h2>
+    <div class="paradas" id="paradas"></div>
+    <div class="acciones">
+      <button class="link" id="agregar">+ Agregar parada</button>
+      <button class="link" id="invertir">⇅ Invertir</button>
+    </div>
+    <div class="campo">
+      <label for="tipoViaje">Tipo de viaje</label>
+      <select id="tipoViaje">
+        <option value="ida">Solo ida</option>
+        <option value="directo">Ida y vuelta (regreso directo al origen)</option>
+        <option value="mismas">Ida y vuelta (regreso por las mismas paradas)</option>
+      </select>
+    </div>
+    <button class="btn" id="calcular">Calcular ruta</button>
+    <div class="error" id="error" role="alert"></div>
+  </section>
+
+  <section id="resultado" hidden>
+    <div class="rotulo"><div class="rotulo-in">
+      <div class="tot"><b id="km"></b><span id="tiempo"></span></div>
+      <div class="via" id="via"></div>
+      <ul class="tramos" id="tramos"></ul>
+    </div></div>
+    <div class="aviso" id="aviso" hidden></div>
+    <img class="mapa" id="mapa" alt="Mapa de la ruta" hidden>
+    <div class="fila-btn">
+      <button class="btn sec" id="compartir">Compartir</button>
+      <a class="btn sec" id="abrirMaps" target="_blank" rel="noopener">Navegar en Maps</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tu vehículo</h2>
+    <div class="campo"><label for="vehiculo">Tipo de vehículo</label><select id="vehiculo"></select></div>
+    <div class="dos">
+      <div class="campo"><label for="rendimiento">Rendimiento</label><input id="rendimiento" type="number" min="0" step="0.1" inputmode="decimal"></div>
+      <div class="campo"><label for="unidad">Unidad</label>
+        <select id="unidad"><option value="kmL">km por litro</option><option value="kmG">km por galón</option></select></div>
+    </div>
+    <p class="ayuda">Si sabés cuánto rinde tu vehículo, cambiá este número. Se guarda en tu teléfono.</p>
+    <div class="dos">
+      <div class="campo"><label for="combustible">Combustible</label>
+        <select id="combustible"><option value="super">Súper</option><option value="regular">Regular</option><option value="diesel">Diésel</option></select></div>
+      <div class="campo"><label for="pasajeros">Personas que pagan</label><input id="pasajeros" type="number" min="1" value="1" inputmode="numeric"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Costo del viaje</h2>
+    <div class="total">
+      <div class="monto" id="costo">C$ 0.00</div>
+      <dl>
+        <dt>Distancia</dt><dd id="rKm">Calculá una ruta</dd>
+        <dt>Combustible</dt><dd id="rLitros">—</dd>
+        <dt>Precio usado</dt><dd id="rPrecio">—</dd>
+        <dt>Por persona</dt><dd id="rPersona">—</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>Viajes guardados</h2>
+    <ul class="historial" id="historial"></ul>
+    <button class="link" id="borrarHist" hidden>Borrar viajes guardados</button>
+  </section>
+
+  <details>
+    <summary>Precios del combustible (por litro)</summary>
+    <div class="tres" style="margin-top:12px">
+      <div class="campo"><label for="pSuper">Súper</label><input id="pSuper" type="number" step="0.01" inputmode="decimal"></div>
+      <div class="campo"><label for="pRegular">Regular</label><input id="pRegular" type="number" step="0.01" inputmode="decimal"></div>
+      <div class="campo"><label for="pDiesel">Diésel</label><input id="pDiesel" type="number" step="0.01" inputmode="decimal"></div>
+    </div>
+    <button class="link" id="restablecer">Usar precios de referencia</button>
+    <div class="estado" id="estado"></div>
+  </details>
+</main>
+<footer>Distancias y tiempos calculados con Google Maps. Los costos son estimados. <a href="privacidad.html">Privacidad</a></footer>
+
+<script src="app.js"></script>
+</body>
+</html>
