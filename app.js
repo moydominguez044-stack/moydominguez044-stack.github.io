@@ -78,6 +78,11 @@ function conectarEventos() {
   $('restablecer').onclick = () => { localStorage.removeItem('rn_precios'); if (preciosRef) ponerPrecios(preciosRef); calcularCosto(); };
   $('compartir').onclick = compartir;
   $('borrarHist').onclick = () => { if (confirm('¿Borrar todos los viajes guardados?')) { guardarLS('rn_hist', []); pintarHistorial(); } };
+  $('pkCerrar').onclick = () => cerrarMapa();
+  $('pkForm').onsubmit = buscarEnMapa;
+  $('pkUsar').onclick = usarLugar;
+  window.addEventListener('popstate', () => cerrarMapa(true));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMapa(); });
   window.addEventListener('online', estadoRed);
   window.addEventListener('offline', estadoRed);
 
@@ -90,24 +95,29 @@ function conectarEventos() {
 function estadoRed() { $('sinred').hidden = navigator.onLine; }
 
 /* ---------- Paradas ---------- */
-// Cada parada: { texto: "San Pedro del Norte, Chinandega" } o { texto: "Mi ubicación", coords: "12.6,-87.1" }
+// Cada parada: { texto: "San Pedro del Norte, Chinandega" } o { texto: "Barrio X, Chinandega", coords: "12.6,-87.1" }
+const ICONO_MAPA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+const ICONO_GPS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+
 function setParadas(lista) {
   const total = lista.length;
   $('paradas').innerHTML = lista.map((p, i) => {
     const nombre = i === 0 ? 'Origen' : i === total - 1 ? 'Destino' : 'Parada ' + i;
-    const gps = i === 0 ? `<button class="icono gpsbtn" data-gps aria-label="Usar mi ubicación como origen" title="Usar mi ubicación">◎</button>` : '';
+    const gps = i === 0 ? `<button class="icono gpsbtn" data-gps aria-label="Usar mi ubicación como origen" title="Mi ubicación">${ICONO_GPS}</button>` : '';
+    const mapa = `<button class="icono gpsbtn" data-mapa="${i}" aria-label="Escoger ${nombre} en el mapa" title="Escoger en el mapa">${ICONO_MAPA}</button>`;
     const quitar = (i > 0 && i < total - 1) ? `<button class="icono" data-quitar="${i}" aria-label="Quitar ${nombre}">×</button>` : '';
-    const v = (p.texto || '').replace(/"/g, '&quot;');
+    const v = esc(p.texto || '');
     return `<div class="parada"><span class="letra" aria-hidden="true">${LETRAS[i]}</span>
-      <input list="lugares" value="${v}" ${p.coords ? `data-coords="${p.coords}" class="gps" readonly` : ''}
-        placeholder="${nombre}: municipio, comarca o lugar" aria-label="${nombre}">${gps}${quitar}</div>`;
+      <input list="lugares" value="${v}" ${p.coords ? `data-coords="${p.coords}" class="fijo" readonly title="Tocá para cambiarlo"` : ''}
+        placeholder="${nombre}: municipio, barrio o lugar" aria-label="${nombre}">${gps}${mapa}${quitar}</div>`;
   }).join('');
 
   $('paradas').querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => {
     const p = getParadas(true); p.splice(+b.dataset.quitar, 1); setParadas(p);
   });
-  $('paradas').querySelectorAll('input.gps').forEach(inp => inp.onclick = () => {
-    inp.removeAttribute('data-coords'); inp.removeAttribute('readonly'); inp.classList.remove('gps'); inp.value = ''; inp.focus();
+  $('paradas').querySelectorAll('[data-mapa]').forEach(b => b.onclick = () => abrirMapa(+b.dataset.mapa));
+  $('paradas').querySelectorAll('input.fijo').forEach(inp => inp.onclick = () => {
+    inp.removeAttribute('data-coords'); inp.removeAttribute('readonly'); inp.classList.remove('fijo'); inp.value = ''; inp.focus();
   });
   const gpsBtn = $('paradas').querySelector('[data-gps]');
   if (gpsBtn) gpsBtn.onclick = usarUbicacion;
@@ -116,7 +126,7 @@ function setParadas(lista) {
 
 function getParadas(incluirVacias) {
   const lista = [...$('paradas').querySelectorAll('input')].map(i =>
-    i.dataset.coords ? { texto: 'Mi ubicación', coords: i.dataset.coords } : { texto: i.value.trim() });
+    i.dataset.coords ? { texto: i.value || 'Punto en el mapa', coords: i.dataset.coords } : { texto: i.value.trim() });
   return incluirVacias ? lista : lista.filter(p => p.texto);
 }
 
@@ -134,6 +144,115 @@ function usarUbicacion() {
       ? 'Diste "no permitir" a la ubicación. Activala en los permisos de la app o escribí el lugar.'
       : 'No se pudo obtener tu ubicación. Revisá que el GPS esté encendido.';
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+
+/* ---------- Mapa para escoger un lugar (Leaflet + OpenStreetMap) ---------- */
+const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
+const pk = { i: 0, mapa: null, marca: null, sel: null, turno: 0 };
+
+function cargarLeaflet() {
+  if (window.L) return Promise.resolve();
+  return new Promise((ok, falla) => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = LEAFLET + 'leaflet.css';
+    document.head.appendChild(css);
+    const js = document.createElement('script');
+    js.src = LEAFLET + 'leaflet.js';
+    js.onload = ok;
+    js.onerror = () => falla(new Error('No se pudo cargar el mapa. Revisá tu conexión.'));
+    document.head.appendChild(js);
+  });
+}
+
+async function abrirMapa(i) {
+  pk.i = i; pk.sel = null;
+  $('pkTitulo').textContent = 'Escogé ' + (i === 0 ? 'el origen' : i === getParadas(true).length - 1 ? 'el destino' : 'la parada ' + i);
+  $('pkRes').innerHTML = ''; $('pkQ').value = '';
+  $('pkSel').textContent = 'Buscá un lugar o tocá el mapa para marcar el punto.';
+  $('pkUsar').disabled = true;
+  $('picker').hidden = false;
+  document.body.style.overflow = 'hidden';
+  history.pushState({ mapa: true }, '');
+  try { await cargarLeaflet(); }
+  catch (e) { $('pkSel').textContent = e.message; return; }
+
+  if (!pk.mapa) {
+    pk.mapa = L.map('pkMapa', { zoomControl: true }).setView([12.9, -85.3], 7);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '© OpenStreetMap'
+    }).addTo(pk.mapa);
+    pk.mapa.on('click', e => marcar(e.latlng.lat, e.latlng.lng, null, null));
+  }
+  if (pk.marca) { pk.marca.remove(); pk.marca = null; }
+  setTimeout(() => {
+    pk.mapa.invalidateSize();
+    const actual = getParadas(true)[i];
+    if (actual && actual.coords) {
+      const [lat, lng] = actual.coords.split(',').map(Number);
+      marcar(lat, lng, actual.texto, null);
+      pk.mapa.setView([lat, lng], 16);
+    } else {
+      // Centrar en otra parada ya escogida, si hay
+      const otra = getParadas(true).find(p => p.coords);
+      if (otra) pk.mapa.setView(otra.coords.split(',').map(Number), 13);
+      if (actual && actual.texto) $('pkQ').value = actual.texto;
+    }
+  }, 60);
+  if (!window.matchMedia('(pointer: coarse)').matches) $('pkQ').focus();
+}
+
+function cerrarMapa(desdeHistorial) {
+  if ($('picker').hidden) return;
+  $('picker').hidden = true;
+  document.body.style.overflow = '';
+  if (!desdeHistorial && history.state && history.state.mapa) history.back();
+}
+
+function marcar(lat, lng, nombre, direccion) {
+  const turno = ++pk.turno;
+  const icono = L.divIcon({ className: '', html: `<div class="pin-letra"><span>${LETRAS[pk.i]}</span></div>`, iconSize: [34, 34], iconAnchor: [17, 34] });
+  if (pk.marca) pk.marca.setLatLng([lat, lng]).setIcon(icono);
+  else pk.marca = L.marker([lat, lng], { icon: icono }).addTo(pk.mapa);
+  pk.sel = { lat, lng, nombre: nombre || 'Punto en el mapa' };
+  $('pkUsar').disabled = false;
+  if (nombre) { mostrarSel(nombre, direccion); return; }
+  mostrarSel('Buscando el nombre del lugar…', '');
+  api('direccion', { lat: lat.toFixed(6), lng: lng.toFixed(6) })
+    .then(d => { if (turno !== pk.turno) return; pk.sel.nombre = d.nombre; mostrarSel(d.nombre, d.direccion); })
+    .catch(() => { if (turno !== pk.turno) return; mostrarSel('Punto en el mapa', lat.toFixed(5) + ', ' + lng.toFixed(5)); });
+}
+
+function mostrarSel(nombre, direccion) {
+  $('pkSel').innerHTML = esc(nombre) + (direccion ? `<small>${esc(direccion)}</small>` : '');
+}
+
+async function buscarEnMapa(e) {
+  e.preventDefault();
+  const q = $('pkQ').value.trim();
+  if (q.length < 3) { $('pkRes').innerHTML = '<li class="vacio">Escribí al menos 3 letras.</li>'; return; }
+  $('pkRes').innerHTML = '<li class="vacio">Buscando…</li>';
+  try {
+    const lista = await api('buscar', { q });
+    if (!lista.length) { $('pkRes').innerHTML = '<li class="vacio">No encontré ese lugar. Probá agregando el municipio, o tocá el mapa.</li>'; return; }
+    $('pkRes').innerHTML = lista.map((r, k) => `<li><button data-r="${k}"><b>${esc(r.nombre)}</b><small>${esc(r.direccion)}</small></button></li>`).join('');
+    $('pkRes').querySelectorAll('[data-r]').forEach(b => b.onclick = () => {
+      const r = lista[+b.dataset.r];
+      $('pkRes').innerHTML = '';
+      if (pk.mapa) { marcar(r.lat, r.lng, r.nombre, r.direccion); pk.mapa.setView([r.lat, r.lng], 16); }
+      $('pkQ').blur();
+    });
+    if (lista.length === 1) $('pkRes').querySelector('button').click();
+  } catch (err) {
+    $('pkRes').innerHTML = `<li class="vacio">${esc(err.message)}</li>`;
+  }
+}
+
+function usarLugar() {
+  if (!pk.sel) return;
+  const p = getParadas(true);
+  p[pk.i] = { texto: pk.sel.nombre, coords: pk.sel.lat.toFixed(6) + ',' + pk.sel.lng.toFixed(6) };
+  setParadas(p);
+  cerrarMapa();
 }
 
 /* ---------- Ruta ---------- */

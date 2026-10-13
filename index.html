@@ -92,6 +92,32 @@
   footer{max-width:560px;margin:0 auto;padding:0 16px 32px;font-size:.85rem;color:var(--gris)}
   footer a{color:var(--gris)}
   [hidden]{display:none!important}
+
+  /* Ventana del mapa para escoger un lugar */
+  .parada input.fijo{background:#EAF4EE;border-color:var(--verde);font-weight:600;cursor:pointer}
+  .icono svg{width:22px;height:22px;display:block;margin:auto}
+  .picker{position:fixed;inset:0;z-index:50;background:var(--papel);display:flex;flex-direction:column}
+  .pk-top{background:var(--verde);color:#fff;display:flex;align-items:center;gap:8px;
+          padding:calc(env(safe-area-inset-top,0px) + 8px) 8px 8px}
+  .pk-top h2{margin:0;color:#fff;font-size:1.25rem;flex:1}
+  .pk-top .icono{color:#fff;font-size:1.6rem}
+  .pk-buscar{display:flex;gap:8px;padding:10px 12px;background:#fff;border-bottom:1px solid var(--borde)}
+  .pk-buscar input{flex:1;min-width:0}
+  .pk-buscar .btn{width:auto;padding:10px 14px}
+  .pk-res{list-style:none;margin:0;padding:0;max-height:38vh;overflow-y:auto;background:#fff}
+  .pk-res li{border-bottom:1px solid var(--borde)}
+  .pk-res button{all:unset;box-sizing:border-box;display:block;width:100%;padding:10px 14px;cursor:pointer}
+  .pk-res button:focus-visible{outline:2px solid var(--verde);outline-offset:-2px}
+  .pk-res b{display:block}
+  .pk-res small{color:var(--gris)}
+  .pk-res .vacio{padding:10px 14px}
+  .pk-mapa{flex:1;min-height:200px;background:#E5E8E3}
+  .pk-pie{background:#fff;border-top:1px solid var(--borde);padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
+  .pk-pie p{margin:0 0 8px;font-weight:600}
+  .pk-pie p small{display:block;font-weight:400;color:var(--gris)}
+  .pin-letra{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--verde);
+             border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center}
+  .pin-letra span{transform:rotate(45deg);color:#fff;font:700 15px 'Barlow Condensed',sans-serif}
 </style>
 </head>
 <body>
@@ -185,6 +211,23 @@
     <div class="estado" id="estado"></div>
   </details>
 </main>
+<div class="picker" id="picker" role="dialog" aria-modal="true" aria-labelledby="pkTitulo" hidden>
+  <div class="pk-top">
+    <button class="icono" id="pkCerrar" aria-label="Cerrar mapa">×</button>
+    <h2 id="pkTitulo">Escogé el lugar</h2>
+  </div>
+  <form class="pk-buscar" id="pkForm" role="search">
+    <input id="pkQ" type="search" placeholder="Barrio, comarca, negocio o dirección" aria-label="Buscar lugar" enterkeyhint="search" autocomplete="off">
+    <button class="btn" type="submit">Buscar</button>
+  </form>
+  <ul class="pk-res" id="pkRes" aria-live="polite"></ul>
+  <div class="pk-mapa" id="pkMapa"></div>
+  <div class="pk-pie">
+    <p id="pkSel">Buscá un lugar o tocá el mapa para marcar el punto.</p>
+    <button class="btn" id="pkUsar" disabled>Usar este lugar</button>
+  </div>
+</div>
+
 <footer>Distancias y tiempos calculados con Google Maps. Los costos son estimados. <a href="privacidad.html">Privacidad</a></footer>
 
 <script src="app.js"></script>

@@ -1,6 +1,6 @@
 /* Guarda la app en el teléfono para que abra sin internet.
  * Cuando cambiés index.html o app.js, subí el número de VERSION. */
-const VERSION = 'rutas-v1';
+const VERSION = 'rutas-v2';
 const ARCHIVOS = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'privacidad.html',
   'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 
@@ -23,7 +23,7 @@ self.addEventListener('fetch', e => {
   // Archivos de la app: primero internet (para tener la última versión), si no hay, la copia guardada
   e.respondWith(
     fetch(e.request).then(res => {
-      if (res.ok && (url.origin === location.origin || url.hostname.includes('gstatic') || url.hostname.includes('googleapis'))) {
+      if (res.ok && (url.origin === location.origin || url.hostname.includes('gstatic') || url.hostname.includes('googleapis') || url.hostname === 'cdnjs.cloudflare.com')) {
         const copia = res.clone();
         caches.open(VERSION).then(c => c.put(e.request, copia));
       }
