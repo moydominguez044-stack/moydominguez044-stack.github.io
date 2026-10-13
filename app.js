@@ -41,14 +41,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!guardados) $('error').textContent = e.message;
   }
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
 });
 
 function aplicarDatos(d) {
-  const lista = [];
-  Object.keys(d.municipios).forEach(dep => d.municipios[dep].forEach(m => lista.push(m + ', ' + dep)));
-  lista.sort((a, b) => a.localeCompare(b, 'es'));
-  $('lugares').innerHTML = lista.map(l => `<option value="${l}">`).join('');
+  prepararLugares(d.municipios);
 
   vehiculos = d.vehiculos;
   preciosRef = d.precios;
@@ -78,6 +75,10 @@ function conectarEventos() {
   $('restablecer').onclick = () => { localStorage.removeItem('rn_precios'); if (preciosRef) ponerPrecios(preciosRef); calcularCosto(); };
   $('compartir').onclick = compartir;
   $('borrarHist').onclick = () => { if (confirm('¿Borrar todos los viajes guardados?')) { guardarLS('rn_hist', []); pintarHistorial(); } };
+  $('paradas').addEventListener('input', e => { if (e.target.matches('input:not(.fijo)')) programarSugerencias(e.target); });
+  $('paradas').addEventListener('focusin', e => { if (e.target.matches('input:not(.fijo)') && e.target.value.trim().length >= 2) programarSugerencias(e.target, 0); });
+  $('paradas').addEventListener('focusout', () => setTimeout(() => { if (!$('paradas').contains(document.activeElement)) cerrarSugerencias(); }, 150));
+  $('paradas').addEventListener('keydown', teclasSugerencias);
   $('pkCerrar').onclick = () => cerrarMapa();
   $('pkForm').onsubmit = buscarEnMapa;
   $('pkUsar').onclick = usarLugar;
@@ -108,7 +109,7 @@ function setParadas(lista) {
     const quitar = (i > 0 && i < total - 1) ? `<button class="icono" data-quitar="${i}" aria-label="Quitar ${nombre}">×</button>` : '';
     const v = esc(p.texto || '');
     return `<div class="parada"><span class="letra" aria-hidden="true">${LETRAS[i]}</span>
-      <input list="lugares" value="${v}" ${p.coords ? `data-coords="${p.coords}" class="fijo" readonly title="Tocá para cambiarlo"` : ''}
+      <input value="${v}" autocomplete="off" enterkeyhint="next" ${p.coords ? `data-coords="${p.coords}" class="fijo" readonly title="Tocá para cambiarlo"` : ''}
         placeholder="${nombre}: municipio, barrio o lugar" aria-label="${nombre}">${gps}${mapa}${quitar}</div>`;
   }).join('');
 
@@ -144,6 +145,183 @@ function usarUbicacion() {
       ? 'Diste "no permitir" a la ubicación. Activala en los permisos de la app o escribí el lugar.'
       : 'No se pudo obtener tu ubicación. Revisá que el GPS esté encendido.';
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+
+/* ---------- Sugerencias mientras se escribe ---------- */
+let LUGARES = [], SOLO_REGION = {};
+const ALIAS_REGION = {
+  'raccs': 'Costa Caribe Sur', 'raas': 'Costa Caribe Sur', 'atlantico sur': 'Costa Caribe Sur', 'caribe sur': 'Costa Caribe Sur', 'region autonoma de la costa caribe sur': 'Costa Caribe Sur',
+  'raccn': 'Costa Caribe Norte', 'raan': 'Costa Caribe Norte', 'atlantico norte': 'Costa Caribe Norte', 'caribe norte': 'Costa Caribe Norte', 'region autonoma de la costa caribe norte': 'Costa Caribe Norte'
+};
+// Primero la cabecera y los municipios con carretera más usados
+const DESTACADOS = { 'Costa Caribe Sur': ['Bluefields', 'El Rama', 'Nueva Guinea', 'Muelle de los Bueyes'],
+  'Costa Caribe Norte': ['Puerto Cabezas (Bilwi)', 'Siuna', 'Rosita', 'Bonanza'], 'Río San Juan': ['San Carlos', 'El Castillo'],
+  'Nueva Segovia': ['Ocotal'], 'Madriz': ['Somoto'], 'Carazo': ['Jinotepe', 'Diriamba'], 'Chontales': ['Juigalpa'] };
+const TIPO_OSM = { neighbourhood: 'Barrio', suburb: 'Barrio', quarter: 'Barrio', city: 'Ciudad', town: 'Ciudad', village: 'Poblado',
+  hamlet: 'Comarca', locality: 'Comarca', isolated_dwelling: 'Caserío', farm: 'Finca', municipality: 'Municipio', residential: 'Calle',
+  primary: 'Carretera', secondary: 'Carretera', tertiary: 'Calle', school: 'Escuela', university: 'Universidad', hospital: 'Hospital',
+  clinic: 'Clínica', pharmacy: 'Farmacia', fuel: 'Gasolinera', marketplace: 'Mercado', supermarket: 'Supermercado',
+  place_of_worship: 'Iglesia', restaurant: 'Restaurante', hotel: 'Hotel', bank: 'Banco', park: 'Parque', recreation_ground: 'Parque' };
+const PRIORIDAD = ['Barrio', 'Ciudad', 'Poblado', 'Comarca', 'Municipio'];
+const norm = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const ICONO_SUG = { lugar: ICONO_MAPA,
+  ciudad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l6-4v15M9 21V3l12 6v12M3 21h18"/></svg>',
+  buscar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>' };
+
+function prepararLugares(municipios) {
+  LUGARES = []; SOLO_REGION = {};
+  const nombresMuni = new Set();
+  Object.keys(municipios).forEach(dep => municipios[dep].forEach(m => {
+    LUGARES.push({ texto: m + ', ' + dep, nombre: m, dep, n: norm(m + ' ' + dep) });
+    nombresMuni.add(norm(m));
+  }));
+  Object.keys(municipios).forEach(dep => { if (!nombresMuni.has(norm(dep))) SOLO_REGION[norm(dep)] = dep; });
+}
+
+function regionDe(texto) {
+  const n = norm(String(texto).replace(/,?\s*nicaragua$/i, ''));
+  return ALIAS_REGION[n] || SOLO_REGION[n] || null;
+}
+
+function municipiosDe(dep) {
+  const dest = DESTACADOS[dep] || [];
+  const orden = n => { const k = dest.indexOf(n); return k === -1 ? 99 : k; };
+  return LUGARES.filter(l => l.dep === dep)
+    .sort((a, b) => orden(a.nombre) - orden(b.nombre) || a.nombre.localeCompare(b.nombre, 'es'));
+}
+
+function esRegion(texto) {
+  const dep = regionDe(texto);
+  if (!dep) return null;
+  return { escrito: texto, dep, ejemplos: municipiosDe(dep).slice(0, 4).map(l => l.nombre) };
+}
+
+function buscarLocal(q) {
+  const dep = regionDe(q);
+  if (dep) return municipiosDe(dep).slice(0, 8).map(l => ({ texto: l.texto, sub: 'Municipio de ' + dep, ico: 'ciudad' }));
+  const palabras = norm(q).split(' ').filter(Boolean);
+  if (!palabras.length) return [];
+  return LUGARES.filter(l => palabras.every(p => l.n.split(' ').some(w => w.startsWith(p))))
+    .sort((a, b) => (norm(b.nombre).startsWith(palabras[0])) - (norm(a.nombre).startsWith(palabras[0])) || a.nombre.localeCompare(b.nombre, 'es'))
+    .slice(0, 4).map(l => ({ texto: l.texto, sub: 'Municipio', ico: 'ciudad' }));
+}
+
+async function buscarOSM(q, senal) {
+  const u = new URL('https://photon.komoot.io/api/');
+  u.searchParams.set('q', q);
+  u.searchParams.set('limit', '10');
+  u.searchParams.set('bbox', '-87.8,10.6,-82.5,15.2'); // Nicaragua
+  const ref = getParadas(true).find(p => p.coords);
+  if (ref) { const [la, lo] = ref.coords.split(','); u.searchParams.set('lat', la); u.searchParams.set('lon', lo); }
+  const j = await (await fetch(u, { signal: senal })).json();
+  const vistos = new Set();
+  return (j.features || [])
+    .filter(f => f.properties && f.properties.name && (!f.properties.countrycode || f.properties.countrycode === 'NI'))
+    .map(f => {
+      const p = f.properties, [lng, lat] = f.geometry.coordinates;
+      const zona = p.city || p.county || p.district || p.state || '';
+      const tipo = TIPO_OSM[p.osm_value] || 'Lugar';
+      return { texto: p.name + (zona && zona !== p.name ? ', ' + zona : ''), sub: tipo + (zona && zona !== p.name ? ' en ' + zona : ''),
+               tipo, coords: lat.toFixed(6) + ',' + lng.toFixed(6), ico: 'lugar' };
+    })
+    .filter(r => { const k = norm(r.texto); if (vistos.has(k)) return false; vistos.add(k); return true; })
+    .sort((a, b) => (PRIORIDAD.indexOf(a.tipo) + 1 || 99) - (PRIORIDAD.indexOf(b.tipo) + 1 || 99))
+    .slice(0, 6);
+}
+
+const sug = { inp: null, timer: null, ctrl: null, opciones: [], activa: -1 };
+
+function programarSugerencias(inp, espera = 300) {
+  sug.inp = inp;
+  clearTimeout(sug.timer);
+  const q = inp.value.trim();
+  if (q.length < 2) { cerrarSugerencias(); return; }
+  pintarSugerencias(inp, buscarLocal(q), q, q.length >= 3 && navigator.onLine);
+  if (q.length < 3 || !navigator.onLine) return;
+  sug.timer = setTimeout(async () => {
+    if (sug.ctrl) sug.ctrl.abort();
+    sug.ctrl = new AbortController();
+    try {
+      const osm = await buscarOSM(q, sug.ctrl.signal);
+      if (sug.inp === inp && inp.value.trim() === q) pintarSugerencias(inp, buscarLocal(q).concat(osm), q, false);
+    } catch (e) {
+      if (e.name !== 'AbortError' && sug.inp === inp) pintarSugerencias(inp, buscarLocal(q), q, false);
+    }
+  }, espera);
+}
+
+function pintarSugerencias(inp, lista, q, cargando) {
+  const fila = inp.closest('.parada');
+  const i = [...$('paradas').querySelectorAll('.parada')].indexOf(fila);
+  let ul = $('sugerencias');
+  if (!ul || ul.previousElementSibling !== fila) {
+    cerrarSugerencias();
+    ul = document.createElement('ul');
+    ul.id = 'sugerencias'; ul.className = 'sugerencias'; ul.setAttribute('role', 'listbox');
+    fila.after(ul);
+  }
+  const acciones = navigator.onLine ? [
+    { accion: 'google', texto: 'Buscar "' + q + '" con Google', sub: 'Si no aparece en la lista', ico: 'buscar' },
+    { accion: 'mapa', texto: 'Escoger en el mapa', sub: 'Tocá el punto exacto', ico: 'lugar' }
+  ] : [];
+  sug.opciones = lista.concat(acciones);
+  sug.activa = -1;
+  ul.innerHTML = lista.map((o, k) => opcionHTML(o, k)).join('')
+    + (cargando ? '<li class="info">Buscando barrios y lugares…</li>' : '')
+    + (acciones.length ? '<li class="sep" role="presentation"></li>' + acciones.map((o, k) => opcionHTML(o, lista.length + k)).join('') : '');
+  ul.querySelectorAll('button').forEach(b => {
+    b.onpointerdown = e => e.preventDefault(); // que el campo no pierda el foco
+    b.onclick = () => escogerSugerencia(+b.dataset.k, i);
+  });
+}
+
+function opcionHTML(o, k) {
+  return `<li role="option"><button type="button" data-k="${k}"><span class="sug-ico">${ICONO_SUG[o.ico] || ''}</span>
+    <span class="sug-txt"><b>${esc(o.texto)}</b><small>${esc(o.sub || '')}</small></span></button></li>`;
+}
+
+function cerrarSugerencias() {
+  clearTimeout(sug.timer);
+  if (sug.ctrl) sug.ctrl.abort();
+  const ul = $('sugerencias');
+  if (ul) ul.remove();
+  sug.opciones = []; sug.activa = -1;
+}
+
+async function escogerSugerencia(k, i) {
+  const o = sug.opciones[k];
+  if (!o) return;
+  const p = getParadas(true);
+  if (o.accion === 'mapa') { cerrarSugerencias(); abrirMapa(i); return; }
+  if (o.accion === 'google') {
+    const q = sug.inp.value.trim(), inp = sug.inp;
+    $('sugerencias').innerHTML = '<li class="info">Buscando con Google…</li>';
+    try {
+      const lista = (await api('buscar', { q })).map(r => ({ texto: r.nombre, sub: r.direccion, coords: r.lat.toFixed(6) + ',' + r.lng.toFixed(6), ico: 'lugar' }));
+      if (!lista.length) { $('sugerencias').innerHTML = '<li class="info">Google tampoco lo encontró. Probá "Escoger en el mapa".</li>'; return; }
+      pintarSugerencias(inp, lista, q, false);
+    } catch (e) { $('sugerencias').innerHTML = `<li class="info">${esc(e.message)}</li>`; }
+    return;
+  }
+  p[i] = o.coords ? { texto: o.texto, coords: o.coords } : { texto: o.texto };
+  cerrarSugerencias();
+  setParadas(p);
+  const sig = $('paradas').querySelectorAll('input')[i + 1];
+  if (sig && !sig.value) sig.focus();
+}
+
+function teclasSugerencias(e) {
+  const ul = $('sugerencias');
+  if (!ul || !sug.opciones.length) return;
+  const botones = [...ul.querySelectorAll('button')];
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    sug.activa = (sug.activa + (e.key === 'ArrowDown' ? 1 : -1) + botones.length) % botones.length;
+    botones.forEach((b, k) => b.classList.toggle('activa', k === sug.activa));
+    botones[sug.activa].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter' && sug.activa >= 0) {
+    e.preventDefault(); botones[sug.activa].click();
+  } else if (e.key === 'Escape') cerrarSugerencias();
 }
 
 /* ---------- Mapa para escoger un lugar (Leaflet + OpenStreetMap) ---------- */
@@ -195,7 +373,10 @@ async function abrirMapa(i) {
       // Centrar en otra parada ya escogida, si hay
       const otra = getParadas(true).find(p => p.coords);
       if (otra) pk.mapa.setView(otra.coords.split(',').map(Number), 13);
-      if (actual && actual.texto) $('pkQ').value = actual.texto;
+      if (actual && actual.texto) {
+        $('pkQ').value = actual.texto;
+        if (actual.texto.length >= 3) $('pkForm').requestSubmit();
+      }
     }
   }, 60);
   if (!window.matchMedia('(pointer: coarse)').matches) $('pkQ').focus();
@@ -260,6 +441,11 @@ async function calcularRuta() {
   $('error').textContent = '';
   let paradas = getParadas(false);
   if (paradas.length < 2) { $('error').textContent = 'Escribí al menos el origen y el destino.'; return; }
+  const region = paradas.map(p => p.coords ? null : esRegion(p.texto)).find(Boolean);
+  if (region) {
+    $('error').textContent = `"${region.escrito}" es una región completa, no un lugar. Escribí una ciudad o municipio, por ejemplo: ${region.ejemplos.join(', ')}.`;
+    return;
+  }
 
   const tramosIda = paradas.length - 1, tipo = $('tipoViaje').value;
   if (tipo === 'directo') paradas = paradas.concat(paradas[0]);
@@ -278,7 +464,7 @@ async function calcularRuta() {
     mostrarViaje(viaje);
     guardarEnHistorial(viaje);
   } catch (e) {
-    $('error').textContent = e.message;
+    $('error').textContent = e.message + (/No hay ruta/.test(e.message) ? ' Si escribiste una región o un lugar muy general, probá con la ciudad o el barrio.' : '');
   } finally {
     $('calcular').disabled = false; $('calcular').textContent = 'Calcular ruta';
   }

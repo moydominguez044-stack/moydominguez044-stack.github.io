@@ -96,6 +96,20 @@
   footer a{color:var(--gris)}
   [hidden]{display:none!important}
 
+  /* Sugerencias mientras se escribe */
+  .sugerencias{list-style:none;margin:-4px 0 12px;padding:4px 0;background:#fff;border:1.5px solid var(--verde);
+               border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.12);max-height:55vh;overflow-y:auto}
+  .sugerencias li button{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:center;width:100%;padding:9px 12px;cursor:pointer}
+  .sugerencias li button:hover,.sugerencias li button.activa{background:#EAF4EE}
+  .sugerencias li button:focus-visible{outline:2px solid var(--verde);outline-offset:-2px}
+  .sug-txt{flex:1;min-width:0}
+  .sug-txt b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sug-txt small{color:var(--gris)}
+  .sug-ico{width:22px;flex:none;color:var(--verde);text-align:center}
+  .sug-ico svg{width:20px;height:20px;display:block;margin:auto}
+  .sugerencias .sep{border-top:1px solid var(--borde);margin:4px 0}
+  .sugerencias .info{padding:8px 12px;color:var(--gris);font-size:.9rem}
+
   /* Ventana del mapa para escoger un lugar */
   .parada input.fijo{background:#EAF4EE;border-color:var(--verde);font-weight:600;cursor:pointer}
   .icono svg{width:22px;height:22px;display:block;margin:auto}
