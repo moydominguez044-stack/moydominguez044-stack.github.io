@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<base target="_top">
+<meta name="theme-color" content="#0062b2">
+<meta name="description" content="App de la Iglesia Bíblica Viviendo por Fe, El Viejo, Chinandega: Biblia, estudios, grupos pequeños y oración.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Viviendo por Fe">
+<meta name="mobile-web-app-capable" content="yes">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Viviendo por Fe</title>
@@ -1442,6 +1449,7 @@ function pintarAjustesFirebase(c, a){
 }
 
 arrancar();
+if('serviceWorker' in navigator && location.protocol==='https:'){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
 </script>
 </body>
 </html>
