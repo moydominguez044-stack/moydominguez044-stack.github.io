@@ -1,5 +1,5 @@
 /* Guarda el lanzador para que abra sin internet. Solo maneja /apps/. */
-const VERSION = 'mis-apps-v2';
+const VERSION = 'mis-apps-v3';
 const ARCHIVOS = ['./', 'index.html', 'apps.json', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys()
