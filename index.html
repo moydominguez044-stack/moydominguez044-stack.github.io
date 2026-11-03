@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rutas Nicaragua</title>
-<meta http-equiv="refresh" content="0; url=./rutas/">
-<link rel="canonical" href="./rutas/">
+<title>Mis Apps</title>
+<noscript><meta http-equiv="refresh" content="0; url=./apps/"></noscript>
+<link rel="canonical" href="./apps/">
 <script>
   // Quita el service worker viejo de la raíz (abarcaba todo el sitio y bloqueaba instalar las otras apps)
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => {
       if (new URL(r.scope).pathname === '/') r.unregister();
-    })).finally(() => location.replace('./rutas/' + location.search + location.hash));
+    })).finally(() => location.replace('./apps/' + location.search + location.hash));
   } else {
-    location.replace('./rutas/' + location.search + location.hash);
+    location.replace('./apps/' + location.search + location.hash);
   }
 </script>
 </head>
 <body style="font-family:system-ui,sans-serif;padding:24px">
-<p>Rutas Nicaragua se movió. <a href="./rutas/">Abrir Rutas Nicaragua</a></p>
+<p>Las apps están aquí: <a href="./apps/">Ver mis apps</a></p>
 </body>
 </html>

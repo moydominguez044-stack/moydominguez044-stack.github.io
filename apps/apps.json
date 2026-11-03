@@ -1,0 +1,70 @@
+{
+  "_ayuda": "Para agregar una app: copie un bloque, cambie nombre, url y grupo. Si la app tiene manifest, ponga su dirección en 'manifest' y el lanzador toma solo el ícono y el color.",
+  "grupos": ["Mis apps", "Amigos for Christ"],
+  "apps": [
+    {
+      "nombre": "Rutas Nicaragua",
+      "descripcion": "Distancia, tiempo y costo de combustible entre lugares de Nicaragua.",
+      "url": "https://moydominguez044-stack.github.io/rutas/",
+      "manifest": "https://moydominguez044-stack.github.io/rutas/manifest.webmanifest",
+      "grupo": "Mis apps",
+      "color": "#13683A"
+    },
+    {
+      "nombre": "Presupuesto en Pareja",
+      "descripcion": "Ingresos, gastos, metas y pagos fijos en pareja.",
+      "url": "https://moydominguez044-stack.github.io/Presupuesto/",
+      "manifest": "https://moydominguez044-stack.github.io/Presupuesto/manifest.webmanifest",
+      "grupo": "Mis apps",
+      "color": "#141A33"
+    },
+    {
+      "nombre": "Viviendo por Fe",
+      "descripcion": "Biblia, estudios, grupos pequeños y oración de la iglesia.",
+      "url": "https://moydominguez044-stack.github.io/AppIglesia/",
+      "manifest": "https://moydominguez044-stack.github.io/AppIglesia/manifest.webmanifest",
+      "grupo": "Mis apps",
+      "color": "#0062B2"
+    },
+    {
+      "nombre": "Cobros Streaming",
+      "descripcion": "Cobros de cuentas de streaming con recordatorios por WhatsApp.",
+      "url": "https://moydominguez044-stack.github.io/-CobroStreaming/",
+      "manifest": "https://moydominguez044-stack.github.io/-CobroStreaming/manifest.webmanifest",
+      "grupo": "Mis apps",
+      "color": "#312E81"
+    },
+    {
+      "nombre": "Imprimir Amigos",
+      "descripcion": "Imprime fotos en las impresoras Bixolon por Bluetooth.",
+      "url": "https://moydominguez044-stack.github.io/bixolon/",
+      "manifest": "https://moydominguez044-stack.github.io/bixolon/manifest.webmanifest",
+      "grupo": "Amigos for Christ",
+      "color": "#0A2240"
+    },
+    {
+      "nombre": "Editor de PDF",
+      "descripcion": "Editar, unir y firmar documentos PDF.",
+      "url": "https://amigos-for-christ-inc.github.io/PDF-AFC/",
+      "manifest": "",
+      "grupo": "Amigos for Christ",
+      "color": "#0A2240"
+    },
+    {
+      "nombre": "Descomprimir AFC",
+      "descripcion": "Descomprimir y comprimir archivos ZIP y otros formatos.",
+      "url": "https://amigos-for-christ-inc.github.io/DescomprimirArchivos/",
+      "manifest": "https://amigos-for-christ-inc.github.io/DescomprimirArchivos/manifest.webmanifest",
+      "grupo": "Amigos for Christ",
+      "color": "#0A2240"
+    },
+    {
+      "nombre": "Control de asistencia",
+      "descripcion": "Marcaje de entrada y salida del personal.",
+      "url": "https://amigos-for-christ-inc.github.io/App_Marcaje_AFC/",
+      "manifest": "https://amigos-for-christ-inc.github.io/App_Marcaje_AFC/manifest.webmanifest",
+      "grupo": "Amigos for Christ",
+      "color": "#0A2240"
+    }
+  ]
+}

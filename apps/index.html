@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16213E">
+<meta name="description" content="Todas mis apps en un solo lugar: ábralas e instálelas desde aquí.">
+<title>Mis Apps</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --fondo: #F4F5F8; --tarjeta: #FFFFFF; --texto: #16213E; --suave: #5D6478;
+    --borde: #E3E6ED; --acento: #16213E; --sobre-acento: #FFFFFF; --sombra: 0 1px 2px rgba(22,33,62,.06), 0 4px 14px rgba(22,33,62,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --fondo: #0E1220; --tarjeta: #171C2E; --texto: #EEF0F6; --suave: #A3A9BC; --borde: #262C42; --acento: #F2B544; --sobre-acento: #16213E; --sombra: none; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  .envoltura { max-width: 980px; margin: 0 auto; padding: calc(20px + env(safe-area-inset-top)) 16px 40px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  header img { width: 44px; height: 44px; border-radius: 12px; }
+  h1 { font-size: 1.6rem; margin: 0; letter-spacing: -.01em; }
+  .sub { color: var(--suave); margin: 4px 0 18px; }
+  .barra { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
+  input[type=search] { flex: 1 1 220px; min-width: 0; padding: 11px 14px; border: 1px solid var(--borde); border-radius: 12px; background: var(--tarjeta); color: var(--texto); font: inherit; }
+  button, .boton { appearance: none; border: 0; border-radius: 12px; padding: 11px 16px; font: 600 15px/1 inherit; font-family: inherit; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .primario { background: var(--acento); color: var(--sobre-acento); }
+  .secundario { background: transparent; color: var(--texto); border: 1px solid var(--borde); }
+  [hidden] { display: none !important; }
+  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); margin: 26px 0 10px; }
+  .rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .app { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 16px; padding: 14px; box-shadow: var(--sombra); display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: start; }
+  .icono { width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 20px; overflow: hidden; }
+  .icono img { width: 100%; height: 100%; object-fit: cover; }
+  .app h3 { margin: 0 0 2px; font-size: 1.02rem; }
+  .app p { margin: 0 0 10px; color: var(--suave); font-size: .9rem; }
+  .acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acciones .boton { padding: 9px 14px; font-size: 14px; }
+  .estado { font-size: .78rem; color: var(--suave); margin-top: 6px; }
+  .estado.malo { color: #C2410C; }
+  .ayuda { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 16px; padding: 16px; margin-top: 30px; color: var(--suave); font-size: .92rem; }
+  .ayuda b { color: var(--texto); }
+  .ayuda ol { margin: 8px 0 0; padding-left: 20px; }
+  .vacio { color: var(--suave); padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <header>
+    <img src="icon-192.png" alt="">
+    <div>
+      <h1>Mis Apps</h1>
+    </div>
+  </header>
+  <p class="sub">Toque <b>Abrir</b> en una app y luego use <b>Instalar</b> en el navegador para tenerla en su pantalla.</p>
+
+  <div class="barra">
+    <input type="search" id="buscar" placeholder="Buscar app…" aria-label="Buscar app">
+    <button class="primario" id="instalarLanzador" hidden>Instalar este lanzador</button>
+  </div>
+
+  <main id="lista"><p class="vacio">Cargando apps…</p></main>
+
+  <section class="ayuda">
+    <b>¿Cómo instalo una app?</b>
+    <ol>
+      <li><b>Android / Chrome / Edge:</b> toque <b>Abrir</b>, luego el menú ⋮ → <b>Instalar app</b> (o el ícono de instalar en la barra de direcciones).</li>
+      <li><b>iPhone / iPad (Safari):</b> toque <b>Abrir</b>, luego <b>Compartir</b> → <b>Agregar a pantalla de inicio</b>.</li>
+      <li>Si sale <b>"Abrir en la app"</b> en vez de instalar, ya la tiene instalada.</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+const lista = document.getElementById('lista');
+const buscar = document.getElementById('buscar');
+let apps = [], grupos = [];
+
+function iniciales(nombre) {
+  return nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+function esc(t) { const d = document.createElement('div'); d.textContent = t ?? ''; return d.innerHTML; }
+
+// Busca el manifest de la app (el indicado en apps.json o el que enlaza su página) para tomar ícono y color
+async function datosDeApp(app) {
+  const info = { icono: app.icono || '', color: app.color || '#16213E', ok: true };
+  let manifestUrl = app.manifest || '';
+  let iconoPagina = '';
+  try {
+    if (!manifestUrl) {
+      const r = await fetch(app.url, { cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      const html = await r.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const link = doc.querySelector('link[rel="manifest"]');
+      if (link) manifestUrl = new URL(link.getAttribute('href'), app.url).href;
+      const ic = doc.querySelector('link[rel="apple-touch-icon"], link[rel="icon"]');
+      if (ic) iconoPagina = new URL(ic.getAttribute('href'), app.url).href;
+    }
+    if (manifestUrl) {
+      const r = await fetch(manifestUrl, { cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      const m = await r.json();
+      const iconos = (m.icons || []).filter(i => !String(i.purpose || '').includes('maskable') || i.purpose.includes('any'));
+      const mejor = (iconos.length ? iconos : (m.icons || []))
+        .sort((a, b) => parseInt(b.sizes) - parseInt(a.sizes))
+        .find(i => parseInt(i.sizes) >= 96) || (m.icons || [])[0];
+      if (mejor && !info.icono) info.icono = new URL(mejor.src, manifestUrl).href;
+      if (m.theme_color) info.color = m.theme_color;
+    }
+    if (!info.icono && iconoPagina) info.icono = iconoPagina;
+  } catch (e) {
+    // Si el manifest indicado no existe, intentar descubrirlo desde la página
+    if (app.manifest) {
+      const r = await datosDeApp({ ...app, manifest: '' });
+      return r;
+    }
+    // Solo avisar si la página realmente no existe; un fallo de red no es motivo de alarma
+    info.ok = e.message !== '404';
+  }
+  return info;
+}
+
+function tarjeta(app) {
+  const el = document.createElement('article');
+  el.className = 'app';
+  el.dataset.busqueda = (app.nombre + ' ' + (app.descripcion || '') + ' ' + app.grupo).toLowerCase();
+  el.innerHTML = `
+    <div class="icono" style="background:${esc(app.color || '#16213E')}">${esc(iniciales(app.nombre))}</div>
+    <div>
+      <h3>${esc(app.nombre)}</h3>
+      <p>${esc(app.descripcion || '')}</p>
+      <div class="acciones">
+        <a class="boton primario" href="${esc(app.url)}" target="_blank" rel="noopener">Abrir</a>
+        <button class="boton secundario" data-copiar="${esc(app.url)}">Copiar enlace</button>
+      </div>
+      <div class="estado" hidden></div>
+    </div>`;
+  datosDeApp(app).then(info => {
+    const ic = el.querySelector('.icono');
+    ic.style.background = info.color;
+    if (info.icono) {
+      const img = new Image();
+      img.alt = '';
+      img.onload = () => { ic.textContent = ''; ic.appendChild(img); };
+      img.src = info.icono;
+    }
+    if (!info.ok) {
+      const est = el.querySelector('.estado');
+      est.hidden = false; est.classList.add('malo');
+      est.textContent = 'No responde: revise que GitHub Pages esté activado en ese repo.';
+    }
+  });
+  return el;
+}
+
+function pintar() {
+  const q = buscar.value.trim().toLowerCase();
+  lista.innerHTML = '';
+  let total = 0;
+  const nombresGrupos = [...new Set([...grupos, ...apps.map(a => a.grupo || 'Otras')])];
+  for (const g of nombresGrupos) {
+    const deGrupo = apps.filter(a => (a.grupo || 'Otras') === g);
+    if (!deGrupo.length) continue;
+    const h = document.createElement('h2'); h.textContent = g;
+    const rej = document.createElement('div'); rej.className = 'rejilla';
+    deGrupo.forEach(a => rej.appendChild(a._el));
+    lista.append(h, rej);
+    let visibles = 0;
+    deGrupo.forEach(a => { const v = !q || a._el.dataset.busqueda.includes(q); a._el.hidden = !v; if (v) visibles++; });
+    h.hidden = rej.hidden = visibles === 0;
+    total += visibles;
+  }
+  if (!total) lista.insertAdjacentHTML('beforeend', '<p class="vacio">No hay apps con ese nombre.</p>');
+}
+
+lista.addEventListener('click', async e => {
+  const b = e.target.closest('[data-copiar]');
+  if (!b) return;
+  try { await navigator.clipboard.writeText(b.dataset.copiar); b.textContent = '¡Copiado!'; }
+  catch { b.textContent = 'No se pudo copiar'; }
+  setTimeout(() => b.textContent = 'Copiar enlace', 1600);
+});
+buscar.addEventListener('input', pintar);
+
+fetch('apps.json', { cache: 'no-store' })
+  .then(r => r.json())
+  .then(d => {
+    grupos = d.grupos || [];
+    apps = (d.apps || []).map(a => ({ ...a, _el: tarjeta(a) }));
+    pintar();
+  })
+  .catch(() => lista.innerHTML = '<p class="vacio">No se pudo cargar la lista de apps.</p>');
+
+// Instalar el lanzador
+let aviso;
+const btnInstalar = document.getElementById('instalarLanzador');
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); aviso = e; btnInstalar.hidden = false; });
+btnInstalar.addEventListener('click', async () => { if (!aviso) return; aviso.prompt(); await aviso.userChoice; aviso = null; btnInstalar.hidden = true; });
+window.addEventListener('appinstalled', () => btnInstalar.hidden = true);
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
+</script>
+</body>
+</html>

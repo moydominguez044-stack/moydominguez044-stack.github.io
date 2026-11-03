@@ -1,0 +1,17 @@
+{
+  "name": "Mis Apps",
+  "short_name": "Mis Apps",
+  "description": "Todas mis apps en un solo lugar.",
+  "lang": "es-NI",
+  "id": "/apps/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F5F8",
+  "theme_color": "#16213E",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
