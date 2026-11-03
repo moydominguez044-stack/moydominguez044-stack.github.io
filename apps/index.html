@@ -62,6 +62,7 @@
     <button class="primario" id="instalarLanzador" hidden>Instalar este lanzador</button>
   </div>
 
+  <p class="sub" id="avisoIos" hidden>Para instalar apps en iPhone, abra este lanzador en <b>Safari</b> (no desde el ícono instalado), toque <b>Abrir</b> y luego Compartir → Agregar a pantalla de inicio.</p>
   <main id="lista"><p class="vacio">Cargando apps…</p></main>
 
   <section class="ayuda">
@@ -69,6 +70,7 @@
     <ol>
       <li><b>Android / Chrome / Edge:</b> toque <b>Abrir</b>, luego el menú ⋮ → <b>Instalar app</b> (o el ícono de instalar en la barra de direcciones).</li>
       <li><b>iPhone / iPad (Safari):</b> toque <b>Abrir</b>, luego <b>Compartir</b> → <b>Agregar a pantalla de inicio</b>.</li>
+      <li>Si se abre en una ventanita con una <b>X</b> arriba, toque el menú ⋮ → <b>Abrir en Chrome</b> y ahí instálela.</li>
       <li>Si sale <b>"Abrir en la app"</b> en vez de instalar, ya la tiene instalada.</li>
     </ol>
   </section>
@@ -81,6 +83,17 @@ let apps = [], grupos = [];
 
 function iniciales(nombre) {
   return nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+// Si el lanzador está instalado, los enlaces se abrirían en la ventanita interna
+// (con la X arriba), donde el navegador no ofrece "Instalar". En Android se abren en Chrome.
+const INSTALADO = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const ANDROID = /Android/i.test(navigator.userAgent);
+const IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+function enlaceAbrir(url) {
+  if (!(INSTALADO && ANDROID)) return url;
+  const u = new URL(url);
+  return 'intent://' + u.host + u.pathname + u.search + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(url) + ';end';
 }
 
 function esc(t) { const d = document.createElement('div'); d.textContent = t ?? ''; return d.innerHTML; }
@@ -135,7 +148,7 @@ function tarjeta(app) {
       <h3>${esc(app.nombre)}</h3>
       <p>${esc(app.descripcion || '')}</p>
       <div class="acciones">
-        <a class="boton primario" href="${esc(app.url)}" target="_blank" rel="noopener">Abrir</a>
+        <a class="boton primario" href="${esc(enlaceAbrir(app.url))}" target="_blank" rel="noopener">${INSTALADO ? 'Abrir para instalar' : 'Abrir'}</a>
         <button class="boton secundario" data-copiar="${esc(app.url)}">Copiar enlace</button>
       </div>
       <div class="estado" hidden></div>
@@ -195,6 +208,8 @@ fetch('apps.json', { cache: 'no-store' })
     pintar();
   })
   .catch(() => lista.innerHTML = '<p class="vacio">No se pudo cargar la lista de apps.</p>');
+
+if (INSTALADO && IOS) document.getElementById('avisoIos').hidden = false;
 
 // Instalar el lanzador
 let aviso;
