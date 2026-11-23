@@ -89,6 +89,18 @@
           "type": "image/png"
         }
       ]
+    },
+    {
+      "name": "Mi Taller OBD",
+      "short_name": "Taller",
+      "url": "/taller/",
+      "icons": [
+        {
+          "src": "/taller/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

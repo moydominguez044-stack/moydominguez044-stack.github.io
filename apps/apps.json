@@ -35,6 +35,14 @@
       "color": "#312E81"
     },
     {
+      "nombre": "Mi Taller OBD",
+      "descripcion": "Escáner del carro con ELM327: revisión, códigos de falla, consumo y costo de viajes.",
+      "url": "https://moydominguez044-stack.github.io/taller/",
+      "manifest": "https://moydominguez044-stack.github.io/taller/manifest.webmanifest",
+      "grupo": "Mis apps",
+      "color": "#0f1419"
+    },
+    {
       "nombre": "Imprimir Amigos",
       "descripcion": "Imprime fotos en las impresoras Bixolon por Bluetooth.",
       "url": "https://moydominguez044-stack.github.io/bixolon/",
