@@ -1,0 +1,32 @@
+{
+  "name": "Mi Taller OBD",
+  "short_name": "Taller OBD",
+  "description": "Escáner OBD-II con ELM327: revisión del carro, códigos de falla, consumo y costo de viajes.",
+  "lang": "es-NI",
+  "id": "/taller/",
+  "start_url": "/taller/",
+  "scope": "/taller/",
+  "display": "standalone",
+  "background_color": "#0f1419",
+  "theme_color": "#0f1419",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
