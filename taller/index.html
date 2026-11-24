@@ -684,17 +684,27 @@ const isCan=()=>['6','7','8','9','A','B','C'].includes(protoNum);
 function isSup(pid){return pid==='RV'||!supported.size||supported.has(parseInt(pid,16));}
 function parseSupported(b,base){const n=((b[0]<<24)>>>0)+(b[1]<<16)+(b[2]<<8)+b[3];for(let i=0;i<32;i++)if(n&(1<<(31-i)))supported.add(base+i+1);}
 
+const AYUDA_BT=`<b>¿No aparece el adaptador en la lista?</b><ol style="margin:6px 0 0;padding-left:20px">
+<li>Dale a Chrome el permiso <b>Dispositivos cercanos</b>: Ajustes del teléfono → Apps → Chrome → Permisos → Dispositivos cercanos → Permitir.</li>
+<li>El ELM327 debe estar <b>enchufado en el carro con la llave en ON</b> (sin corriente no aparece) y <b>emparejado</b> en Ajustes → Bluetooth (PIN 1234 o 0000). Si ya estaba emparejado, quitalo y emparejalo de nuevo.</li>
+<li><b>Cerrá Car Scanner</b> por completo (forzar detención): si la otra app tiene el adaptador ocupado, Chrome no lo ve.</li>
+<li>Actualizá <b>Chrome</b> en Play Store y abrí la app en Chrome (no dentro de WhatsApp, Facebook u otro navegador).</li>
+</ol><span style="font-size:12px;opacity:.8">Tu navegador: ${(navigator.userAgent.match(/Chrome\/[\d.]+/)||['desconocido'])[0]} · Web Serial: ${'serial' in navigator?'sí':'no'}</span>`;
 async function connect(){
  showErr('');
  if(!('serial' in navigator)){showErr('Este navegador no permite conectar adaptadores Bluetooth. Abrí la app en <b>Chrome para Android actualizado</b> desde una dirección https (o Chrome en una computadora). No funciona en iPhone.');return;}
  try{
-  try{port=await navigator.serial.requestPort({filters:[{bluetoothServiceClassId:SPP}]});}
-  catch(e){if(e.name==='NotFoundError')throw e;port=await navigator.serial.requestPort({allowedBluetoothServiceClassIds:[SPP]});}
+  // Sin filtros: muestra todos los puertos/Bluetooth emparejados (algunos ELM327 clones no anuncian bien el perfil serie)
+  try{port=await navigator.serial.requestPort({allowedBluetoothServiceClassIds:[SPP]});}
+  catch(e){if(e.name==='NotFoundError')throw e;port=await navigator.serial.requestPort();}
   setPill('Abriendo…','warn');await port.open({baudRate:38400});
   writer=port.writable.getWriter();running=true;demo=false;readLoop();
   await initElm();setConnected(true);keepAwake();pollLoop();
  }catch(e){
-  running=false;if(e.name==='NotFoundError'){setPill('Desconectado');return;}
+  running=false;if(e.name==='NotFoundError'){setPill('Desconectado');showErr(AYUDA_BT);return;}
+  if(e.noObd){showErr(`<b>El adaptador conectó bien, pero la computadora del vehículo no respondió en ningún protocolo OBD-II.</b><br>
+Revisá primero que la llave esté en ON (o el motor encendido).<br><br>
+Si sigue igual, lo más probable es que <b>este vehículo no sea OBD-II genérico</b>. Es común en <b>diésel</b> (por ejemplo, Nissan Frontier D22, Toyota Hilux y Mitsubishi L200 de mercado latinoamericano) y en carros fabricados para Latinoamérica antes de ~2008, aunque tengan el conector de 16 pines. Esos usan el protocolo propio de la marca (por ejemplo, Nissan Consult) y solo los lee un <b>escáner multimarca de taller</b> (Launch, Autel, Thinkcar) o uno de la marca. No es falla del adaptador ni de la app.`);setPill('Sin respuesta del carro','bad');try{await writer.releaseLock();}catch(_){}try{await reader.cancel();}catch(_){}try{await port.close();}catch(_){}return;}
   showErr('No se pudo conectar: '+esc(e.message)+'<br>Revisá que el ELM327 esté emparejado, que Car Scanner esté cerrado y que el adaptador tenga luz encendida.');
   setPill('Error','bad');try{await port.close();}catch(_){}
  }
@@ -707,7 +717,7 @@ async function initElm(){
  let b=bytesFor(await cmd('0100',20000),'4100');
  if(!b){raw('Reintentando con J1850 VPW…');await cmd('ATSP2',2000);b=bytesFor(await cmd('0100',15000),'4100');}
  if(!b){raw('Reintentando con ISO 9141…');await cmd('ATSP3',2000);b=bytesFor(await cmd('0100',15000),'4100');}
- if(!b)throw new Error('El adaptador conectó, pero la computadora del carro no responde. ¿La llave está en ON?');
+ if(!b)throw Object.assign(new Error('NOOBD'),{noObd:true});
  supported=new Set();parseSupported(b,0);
  for(const base of [0x20,0x40,0x60]){if(!supported.has(base))break;const hx=base.toString(16).toUpperCase();const bb=bytesFor(await cmd('01'+hx,4000),'41'+hx);if(bb)parseSupported(bb,base);else break;}
  const dp=lines(await cmd('ATDPN',2000))[0]||'';protoNum=dp.replace(/^A/,'');
